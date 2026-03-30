@@ -53,8 +53,8 @@ export default function ExpensesReportPage() {
     }
   }, [isAdmin, filters]);
 
-  async function loadReport() {
-    setLoading(true);
+  async function loadReport({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const params = {};
       if (filters.type) params.type = filters.type;
@@ -64,7 +64,7 @@ export default function ExpensesReportPage() {
     } catch (error) {
       console.error('Failed to load report:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -108,7 +108,7 @@ export default function ExpensesReportPage() {
     try {
       await api.deleteExpense(id);
       // Reload the report
-      await loadReport();
+      await loadReport({ silent: true });
       // Clear cached monthly data to refresh
       setMonthlyData({});
     } catch (error) {
@@ -192,9 +192,23 @@ export default function ExpensesReportPage() {
         await api.createExpense(payload);
       }
       closeModal();
-      await loadReport();
-      // Clear cached monthly data to refresh
-      setMonthlyData({});
+      await loadReport({ silent: true });
+      // Refresh monthly data for the expanded year, keeping accordion open
+      if (expandedYear) {
+        setLoadingMonthly(prev => ({ ...prev, [expandedYear]: true }));
+        try {
+          const params = { year: expandedYear };
+          if (filters.type) params.type = filters.type;
+          const result = await api.getExpensesReport(params);
+          setMonthlyData(prev => ({ ...prev, [expandedYear]: result.monthly }));
+        } catch (error) {
+          console.error('Failed to refresh monthly data:', error);
+        } finally {
+          setLoadingMonthly(prev => ({ ...prev, [expandedYear]: false }));
+        }
+      } else {
+        setMonthlyData({});
+      }
     } catch (error) {
       if (error.data?.errors) {
         const messages = Object.values(error.data.errors).flat().join(', ');
