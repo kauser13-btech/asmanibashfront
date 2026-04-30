@@ -79,7 +79,14 @@ export default function BillsReportPage() {
       const result = await api.getBillsReport(params);
       setData(result);
       setFlats(result.filters.flats);
-      setMonthlyData({});
+
+      if (expandedYear) {
+        const monthParams = { year: expandedYear, ...params };
+        const monthResult = await api.getBillsReport(monthParams);
+        setMonthlyData(prev => ({ ...prev, [expandedYear]: monthResult.monthly }));
+      } else {
+        setMonthlyData({});
+      }
     } catch (error) {
       console.error('Failed to refresh data:', error);
     }
