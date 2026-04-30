@@ -24,7 +24,6 @@ export default function ExpensesReportPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [formData, setFormData] = useState({
-    serial_no: '',
     type: 'Bill',
     amount: '',
     for_month: '',
@@ -34,6 +33,7 @@ export default function ExpensesReportPage() {
     source: 'Petty Cash',
   });
   const [formError, setFormError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [filters, setFilters] = useState({ type: '' });
   const { user, loading: authLoading, logout, isAdmin } = useAuth();
@@ -121,7 +121,6 @@ export default function ExpensesReportPage() {
   function openCreateModal() {
     setEditingExpense(null);
     setFormData({
-      serial_no: '',
       type: 'Bill',
       amount: '',
       for_month: MONTHS[new Date().getMonth()],
@@ -137,7 +136,6 @@ export default function ExpensesReportPage() {
   function openEditModal(expense) {
     setEditingExpense(expense);
     setFormData({
-      serial_no: expense.serial_no,
       type: expense.type,
       amount: expense.amount,
       for_month: expense.for_month,
@@ -154,6 +152,7 @@ export default function ExpensesReportPage() {
     setShowModal(false);
     setEditingExpense(null);
     setFormError('');
+    setSuccessMessage('');
   }
 
   async function handleSubmit(e) {
@@ -168,7 +167,6 @@ export default function ExpensesReportPage() {
       let payload;
       if (file) {
         payload = new FormData();
-        payload.append('serial_no', formData.serial_no);
         payload.append('type', formData.type);
         payload.append('amount', Number.parseFloat(formData.amount));
         payload.append('for_month', formData.for_month);
@@ -188,10 +186,11 @@ export default function ExpensesReportPage() {
 
       if (editingExpense) {
         await api.updateExpense(editingExpense.id, payload);
+        setSuccessMessage('Expense updated successfully!');
       } else {
         await api.createExpense(payload);
+        setSuccessMessage('Expense created successfully!');
       }
-      closeModal();
       await loadReport({ silent: true });
       // Refresh monthly data for the expanded year, keeping accordion open
       if (expandedYear) {
@@ -209,6 +208,7 @@ export default function ExpensesReportPage() {
       } else {
         setMonthlyData({});
       }
+      setTimeout(() => closeModal(), 1200);
     } catch (error) {
       if (error.data?.errors) {
         const messages = Object.values(error.data.errors).flat().join(', ');
@@ -552,31 +552,23 @@ export default function ExpensesReportPage() {
                     {formError}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Serial No</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.serial_no}
-                      onChange={(e) => setFormData({ ...formData, serial_no: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="e.g. 001"
-                    />
+                {successMessage && (
+                  <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded text-sm">
+                    {successMessage}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                    <select
-                      required
-                      value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {EXPENSE_TYPES.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <select
+                    required
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {EXPENSE_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Details</label>

@@ -70,6 +70,21 @@ export default function BillsReportPage() {
     }
   }
 
+  async function refreshData() {
+    try {
+      const params = {};
+      if (filters.flat_id) params.flat_id = filters.flat_id;
+      if (filters.status) params.status = filters.status;
+
+      const result = await api.getBillsReport(params);
+      setData(result);
+      setFlats(result.filters.flats);
+      setMonthlyData({});
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+    }
+  }
+
   async function toggleYearAccordion(year) {
     if (expandedYear === year) {
       setExpandedYear(null);
@@ -194,13 +209,13 @@ export default function BillsReportPage() {
 
       if (editingBill) {
         await api.updateBill(editingBill.id, payload);
-        closeModal();
+        setSuccessMessage('Bill updated successfully!');
+        await refreshData();
+        setTimeout(() => closeModal(), 1200);
       } else {
         const result = await api.createBill(payload);
         if (formData.flat_id === 'all') {
-          // Show success message for bulk creation
           setSuccessMessage(result.message);
-          // Reset form but keep modal open to show message
           setFormData({
             bill_date: new Date().toISOString().split('T')[0],
             flat_id: '',
@@ -211,12 +226,12 @@ export default function BillsReportPage() {
             for_month: MONTHS[new Date().getMonth()],
             year: new Date().getFullYear(),
           });
+          await refreshData();
         } else {
+          await refreshData();
           closeModal();
         }
       }
-      await loadReport();
-      setMonthlyData({});
     } catch (error) {
       if (error.data?.errors) {
         const messages = Object.values(error.data.errors).flat().join(', ');
