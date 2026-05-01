@@ -5,16 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardPage() {
-  const { user, loading, logout, isAdmin } = useAuth();
+  const { user, loading, logout, isAdmin, isUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
-    } else if (!loading && isAdmin) {
+    } else if (!loading && (isAdmin || isUser)) {
       router.push('/admin');
     }
-  }, [user, loading, isAdmin, router]);
+  }, [user, loading, isAdmin, isUser, router]);
 
   if (loading || !user) {
     return (

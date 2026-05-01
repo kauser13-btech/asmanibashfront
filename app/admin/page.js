@@ -17,16 +17,16 @@ export default function AdminPage() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'user', status: 'approved' });
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
-  const { user, loading: authLoading, logout, isAdmin } = useAuth();
+  const { user, loading: authLoading, logout, isAdmin, isUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
-    } else if (!authLoading && user && !isAdmin) {
+    } else if (!authLoading && user && !isAdmin && !isUser) {
       router.push('/dashboard');
     }
-  }, [user, authLoading, isAdmin, router]);
+  }, [user, authLoading, isAdmin, isUser, router]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -134,7 +134,7 @@ export default function AdminPage() {
     }
   }
 
-  if (authLoading || !user || !isAdmin) {
+  if (authLoading || !user || (!isAdmin && !isUser)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -146,7 +146,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+          <h1 className="text-xl font-bold text-gray-900">{isAdmin ? 'Admin Panel' : 'Reports'}</h1>
           <div className="flex items-center gap-4">
             <span className="text-gray-600">Welcome, {user.name}</span>
             <button
@@ -166,7 +166,7 @@ export default function AdminPage() {
               href="/admin/flats"
               className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
             >
-              Manage Flats
+              {isAdmin ? 'Manage Flats' : 'View Flats'}
             </Link>
             <Link
               href="/admin/bills"
@@ -189,7 +189,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {stats && (
+        {isAdmin && stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-gray-900">{stats.total_users}</div>
@@ -210,7 +210,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow">
+        {isAdmin && <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <div className="flex gap-4">
               <button
@@ -361,10 +361,10 @@ export default function AdminPage() {
               </tbody>
             </table>
           )}
-        </div>
+        </div>}
       </div>
 
-      {showModal && (
+      {isAdmin && showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="px-6 py-4 border-b border-gray-200">

@@ -36,22 +36,22 @@ export default function ExpensesReportPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [filters, setFilters] = useState({ type: '' });
-  const { user, loading: authLoading, logout, isAdmin } = useAuth();
+  const { user, loading: authLoading, logout, isAdmin, isUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
-    } else if (!authLoading && user && !isAdmin) {
+    } else if (!authLoading && user && !isAdmin && !isUser) {
       router.push('/dashboard');
     }
-  }, [user, authLoading, isAdmin, router]);
+  }, [user, authLoading, isAdmin, isUser, router]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isUser) {
       loadReport();
     }
-  }, [isAdmin, filters]);
+  }, [isAdmin, isUser, filters]);
 
   async function loadReport({ silent = false } = {}) {
     if (!silent) setLoading(true);
@@ -100,6 +100,76 @@ export default function ExpensesReportPage() {
     } else {
       setExpandedMonth(month);
     }
+  }
+
+  function handlePrintMonth(monthData, year) {
+    const printWindow = window.open('', '_blank');
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Expenses - ${monthData.month} ${year}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+          .logo { margin-bottom: 30px; }
+          .logo-text { font-size: 28px; font-weight: bold; color: #333; }
+          .header-line { border-top: 3px solid #f97316; border-bottom: 1px solid #333; padding: 4px 0; margin-bottom: 20px; }
+          .period { text-align: right; color: #666; font-size: 14px; margin-bottom: 10px; }
+          .total-section { text-align: right; margin-bottom: 20px; font-size: 18px; }
+          .total-section .label { color: #666; }
+          .total-section .amount { font-weight: bold; color: #f97316; font-size: 24px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { text-align: left; padding: 12px 8px; border-top: 2px solid #333; border-bottom: 2px solid #c00; font-weight: bold; font-size: 13px; }
+          th:last-child { text-align: right; }
+          td { padding: 10px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+          td.amount { text-align: right; font-weight: bold; }
+          @media print {
+            body { padding: 20px; }
+            @page { margin: 1cm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="logo">
+          <span class="logo-text">ASMA<br/>NIBAS</span>
+        </div>
+        <div class="header-line"></div>
+        <div class="period">Period: ${monthData.month} ${year}</div>
+        <div class="total-section">
+          <span class="label">Total Expense</span>&nbsp;&nbsp;
+          <span class="amount">৳ ${Number.parseFloat(monthData.total).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">S/N</th>
+              <th style="width:100px;">Type</th>
+              <th>Details</th>
+              <th style="width:100px;">Date</th>
+              <th style="width:100px;">Source</th>
+              <th style="width:120px;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(monthData.expenses || []).map(expense => `
+              <tr>
+                <td>${expense.serial_no}</td>
+                <td>${expense.type}</td>
+                <td>${expense.details || '-'}</td>
+                <td>${expense.expense_date ? new Date(expense.expense_date).toLocaleDateString() : '-'}</td>
+                <td>${expense.source || '-'}</td>
+                <td class="amount">৳ ${Number.parseFloat(expense.amount).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <script>window.onload = function() { window.print(); }</script>
+      </body>
+      </html>
+    `;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
   }
 
   async function handleDelete(id) {
@@ -240,7 +310,7 @@ export default function ExpensesReportPage() {
     return colors[type] || 'bg-gray-100 text-gray-800';
   }
 
-  if (authLoading || !user || !isAdmin) {
+  if (authLoading || !user || (!isAdmin && !isUser)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -335,12 +405,14 @@ export default function ExpensesReportPage() {
                     Clear Filter
                   </button>
                 </div>
-                <button
-                  onClick={openCreateModal}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  + Add Expense
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={openCreateModal}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    + Add Expense
+                  </button>
+                )}
               </div>
             </div>
 
@@ -424,7 +496,17 @@ export default function ExpensesReportPage() {
                                         <span className="font-medium text-gray-900">{monthData.month}</span>
                                         <span className="text-sm text-gray-500">({monthData.count} expenses)</span>
                                       </div>
-                                      <div className="font-bold text-red-600">{formatAmount(monthData.total)}</div>
+                                      <div className="flex items-center gap-3">
+                                        <div className="font-bold text-red-600">{formatAmount(monthData.total)}</div>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handlePrintMonth(monthData, yearData.year); }}
+                                          className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 border border-gray-300"
+                                          title="Print month expenses"
+                                        >
+                                          Print
+                                        </button>
+                                      </div>
                                     </div>
 
                                     {/* Expenses List */}
@@ -447,7 +529,7 @@ export default function ExpensesReportPage() {
                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
                                                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                                                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Receipt</th>
-                                                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                                {isAdmin && <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>}
                                               </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
@@ -484,24 +566,26 @@ export default function ExpensesReportPage() {
                                                       <span className="text-gray-300 text-xs">—</span>
                                                     )}
                                                   </td>
-                                                  <td className="px-4 py-2 text-center">
-                                                    <div className="flex justify-center gap-1">
-                                                      <button
-                                                        onClick={(e) => { e.stopPropagation(); openEditModal(expense); }}
-                                                        disabled={actionLoading === expense.id}
-                                                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
-                                                      >
-                                                        Edit
-                                                      </button>
-                                                      <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDelete(expense.id); }}
-                                                        disabled={actionLoading === expense.id}
-                                                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
-                                                      >
-                                                        Delete
-                                                      </button>
-                                                    </div>
-                                                  </td>
+                                                  {isAdmin && (
+                                                    <td className="px-4 py-2 text-center">
+                                                      <div className="flex justify-center gap-1">
+                                                        <button
+                                                          onClick={(e) => { e.stopPropagation(); openEditModal(expense); }}
+                                                          disabled={actionLoading === expense.id}
+                                                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
+                                                        >
+                                                          Edit
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => { e.stopPropagation(); handleDelete(expense.id); }}
+                                                          disabled={actionLoading === expense.id}
+                                                          className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
+                                                        >
+                                                          Delete
+                                                        </button>
+                                                      </div>
+                                                    </td>
+                                                  )}
                                                 </tr>
                                               ))}
                                             </tbody>
@@ -537,7 +621,7 @@ export default function ExpensesReportPage() {
       </div>
 
       {/* Modal */}
-      {showModal && (
+      {isAdmin && showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">

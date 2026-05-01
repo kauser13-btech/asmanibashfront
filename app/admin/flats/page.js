@@ -15,22 +15,22 @@ export default function FlatsPage() {
   const [formData, setFormData] = useState({ flat_number: '', owner_name: '', phone: '', email: '' });
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
-  const { user, loading: authLoading, logout, isAdmin } = useAuth();
+  const { user, loading: authLoading, logout, isAdmin, isUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
-    } else if (!authLoading && user && !isAdmin) {
+    } else if (!authLoading && user && !isAdmin && !isUser) {
       router.push('/dashboard');
     }
-  }, [user, authLoading, isAdmin, router]);
+  }, [user, authLoading, isAdmin, isUser, router]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isUser) {
       loadFlats();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isUser]);
 
   async function loadFlats() {
     setLoading(true);
@@ -107,7 +107,7 @@ export default function FlatsPage() {
     }
   }
 
-  if (authLoading || !user || !isAdmin) {
+  if (authLoading || !user || (!isAdmin && !isUser)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -141,12 +141,14 @@ export default function FlatsPage() {
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Flats ({flats.length})</h2>
-            <button
-              onClick={openCreateModal}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            >
-              + Add Flat
-            </button>
+            {isAdmin && (
+              <button
+                onClick={openCreateModal}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                + Add Flat
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -169,9 +171,11 @@ export default function FlatsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
+                  {isAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -189,22 +193,24 @@ export default function FlatsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {flat.email || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                      <button
-                        onClick={() => openEditModal(flat)}
-                        disabled={actionLoading === flat.id}
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(flat.id)}
-                        disabled={actionLoading === flat.id}
-                        className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                        <button
+                          onClick={() => openEditModal(flat)}
+                          disabled={actionLoading === flat.id}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(flat.id)}
+                          disabled={actionLoading === flat.id}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -213,7 +219,7 @@ export default function FlatsPage() {
         </div>
       </div>
 
-      {showModal && (
+      {isAdmin && showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="px-6 py-4 border-b border-gray-200">

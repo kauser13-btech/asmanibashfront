@@ -13,22 +13,22 @@ export default function BalanceReportPage() {
   const [monthlyData, setMonthlyData] = useState({});
   const [loadingMonthly, setLoadingMonthly] = useState({});
   const [offcanvas, setOffcanvas] = useState({ open: false, visible: false, month: '', year: '', type: '', data: [], loading: false });
-  const { user, loading: authLoading, logout, isAdmin } = useAuth();
+  const { user, loading: authLoading, logout, isAdmin, isUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
-    } else if (!authLoading && user && !isAdmin) {
+    } else if (!authLoading && user && !isAdmin && !isUser) {
       router.push('/dashboard');
     }
-  }, [user, authLoading, isAdmin, router]);
+  }, [user, authLoading, isAdmin, isUser, router]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isUser) {
       loadReport();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isUser]);
 
   async function loadReport() {
     setLoading(true);
@@ -196,7 +196,7 @@ export default function BalanceReportPage() {
     printWindow.document.close();
   }
 
-  if (authLoading || !user || !isAdmin) {
+  if (authLoading || !user || (!isAdmin && !isUser)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>

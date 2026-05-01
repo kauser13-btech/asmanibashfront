@@ -36,22 +36,22 @@ export default function BillsReportPage() {
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [filters, setFilters] = useState({ flat_id: '', status: '' });
-  const { user, loading: authLoading, logout, isAdmin } = useAuth();
+  const { user, loading: authLoading, logout, isAdmin, isUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
-    } else if (!authLoading && user && !isAdmin) {
+    } else if (!authLoading && user && !isAdmin && !isUser) {
       router.push('/dashboard');
     }
-  }, [user, authLoading, isAdmin, router]);
+  }, [user, authLoading, isAdmin, isUser, router]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isUser) {
       loadReport();
     }
-  }, [isAdmin, filters]);
+  }, [isAdmin, isUser, filters]);
 
   async function loadReport() {
     setLoading(true);
@@ -259,7 +259,7 @@ export default function BillsReportPage() {
     }).format(amount);
   }
 
-  if (authLoading || !user || !isAdmin) {
+  if (authLoading || !user || (!isAdmin && !isUser)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -369,12 +369,14 @@ export default function BillsReportPage() {
                     Clear Filters
                   </button>
                 </div>
-                <button
-                  onClick={openCreateModal}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  + Add Bill
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={openCreateModal}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    + Add Bill
+                  </button>
+                )}
               </div>
             </div>
 
@@ -484,7 +486,7 @@ export default function BillsReportPage() {
                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                                                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                                                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                                                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                                {isAdmin && <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>}
                                               </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
@@ -502,36 +504,48 @@ export default function BillsReportPage() {
                                                     {formatAmount(bill.amount)}
                                                   </td>
                                                   <td className="px-4 py-2 text-center">
-                                                    <button
-                                                      onClick={(e) => { e.stopPropagation(); handleStatusToggle(bill); }}
-                                                      disabled={actionLoading === bill.id}
-                                                      className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                                                    {isAdmin ? (
+                                                      <button
+                                                        onClick={(e) => { e.stopPropagation(); handleStatusToggle(bill); }}
+                                                        disabled={actionLoading === bill.id}
+                                                        className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                                                          bill.status === 'Paid'
+                                                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                                        } disabled:opacity-50`}
+                                                      >
+                                                        {bill.status}
+                                                      </button>
+                                                    ) : (
+                                                      <span className={`px-2 py-0.5 text-xs font-semibold rounded ${
                                                         bill.status === 'Paid'
-                                                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                                                      } disabled:opacity-50`}
-                                                    >
-                                                      {bill.status}
-                                                    </button>
+                                                          ? 'bg-green-100 text-green-800'
+                                                          : 'bg-red-100 text-red-800'
+                                                      }`}>
+                                                        {bill.status}
+                                                      </span>
+                                                    )}
                                                   </td>
-                                                  <td className="px-4 py-2 text-center">
-                                                    <div className="flex justify-center gap-1">
-                                                      <button
-                                                        onClick={(e) => { e.stopPropagation(); openEditModal(bill); }}
-                                                        disabled={actionLoading === bill.id}
-                                                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
-                                                      >
-                                                        Edit
-                                                      </button>
-                                                      <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDelete(bill.id); }}
-                                                        disabled={actionLoading === bill.id}
-                                                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
-                                                      >
-                                                        Delete
-                                                      </button>
-                                                    </div>
-                                                  </td>
+                                                  {isAdmin && (
+                                                    <td className="px-4 py-2 text-center">
+                                                      <div className="flex justify-center gap-1">
+                                                        <button
+                                                          onClick={(e) => { e.stopPropagation(); openEditModal(bill); }}
+                                                          disabled={actionLoading === bill.id}
+                                                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
+                                                        >
+                                                          Edit
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => { e.stopPropagation(); handleDelete(bill.id); }}
+                                                          disabled={actionLoading === bill.id}
+                                                          className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
+                                                        >
+                                                          Delete
+                                                        </button>
+                                                      </div>
+                                                    </td>
+                                                  )}
                                                 </tr>
                                               ))}
                                             </tbody>
@@ -577,7 +591,7 @@ export default function BillsReportPage() {
       </div>
 
       {/* Modal */}
-      {showModal && (
+      {isAdmin && showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">

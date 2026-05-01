@@ -63,6 +63,7 @@ export function AuthProvider({ children }) {
     logout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
+    isUser: user?.role === 'user',
   };
 
   return (
