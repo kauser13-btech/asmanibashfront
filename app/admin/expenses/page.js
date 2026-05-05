@@ -620,17 +620,56 @@ export default function ExpensesReportPage() {
         )}
       </div>
 
-      {/* Modal */}
-      {isAdmin && showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
+      {/* Floating Add Expense Button */}
+      {isAdmin && (
+        <button
+          onClick={openCreateModal}
+          title="Add Expense"
+          className="fixed bottom-8 right-8 z-40 flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 active:scale-95 transition-all text-sm font-semibold"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Expense
+        </button>
+      )}
+
+      {/* Drawer overlay */}
+      {isAdmin && (
+        <div
+          className={`fixed inset-0 z-40 transition-all duration-300 ${showModal ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        >
+          {/* Backdrop */}
+          <button
+            type="button"
+            aria-label="Close drawer"
+            onClick={closeModal}
+            className={`absolute inset-0 w-full h-full bg-black border-0 cursor-default transition-opacity duration-300 ${showModal ? 'opacity-40' : 'opacity-0'}`}
+          />
+
+          {/* Drawer panel */}
+          <div
+            className={`absolute top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${showModal ? 'translate-x-0' : 'translate-x-full'}`}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-bold text-gray-900">
                 {editingExpense ? 'Edit Expense' : 'Add Expense'}
               </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <form onSubmit={handleSubmit}>
-              <div className="px-6 py-4 space-y-4">
+
+            {/* Form — scrollable body */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
                 {formError && (
                   <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
                     {formError}
@@ -746,7 +785,9 @@ export default function ExpensesReportPage() {
                   )}
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+
+              {/* Footer — pinned to bottom */}
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={closeModal}
